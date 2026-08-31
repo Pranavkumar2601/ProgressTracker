@@ -1,0 +1,571 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Job Switch 2027 — Study Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="config.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <div class="mark">JS</div>
+          <div>
+            <b>Job Switch 2027</b>
+            <small>Study command center</small>
+          </div>
+        </div>
+
+        <nav>
+          <button class="nav active" data-view="dashboard">Dashboard</button>
+          <button class="nav" data-view="courses">Courses</button>
+          <button class="nav" data-view="revision">Revision</button>
+          <button class="nav" data-view="projects">Projects</button>
+          <button class="nav" data-view="calendar">Calendar</button>
+          <button class="nav" data-view="settings">Settings</button>
+        </nav>
+
+        <div class="side-bottom">
+          <span id="saveState">Saved locally</span>
+          <button class="btn secondary" id="export1">Export JSON</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <button class="menu" id="menuBtn">☰</button>
+          <div>
+            <small>CAREER TARGET</small>
+            <h1 id="pageTitle">Dashboard</h1>
+          </div>
+          <button class="btn secondary" id="quickAdd">+ Add topic</button>
+        </header>
+
+        <section class="view active" id="dashboard">
+          <div class="top-grid">
+            <section class="panel dark">
+              <small>JOB SWITCH TARGET</small>
+              <h2 id="targetLabel">February 2027</h2>
+              <div class="countdown" id="countdown">-- : -- : -- : --</div>
+              <div class="count-labels">
+                <span>Days</span><span>Hours</span><span>Min</span
+                ><span>Sec</span>
+              </div>
+              <div class="target-line" id="targetLine"></div>
+            </section>
+
+            <section class="panel">
+              <div class="row between">
+                <div>
+                  <small>OVERALL PREPARATION</small>
+                  <h2 id="overall">0%</h2>
+                </div>
+                <span class="pill" id="donePill">0 / 0 completed</span>
+              </div>
+              <div class="progress"><i id="overallBar"></i></div>
+              <div class="stats">
+                <div><small>Completed</small><b id="completed">0</b></div>
+                <div><small>In progress</small><b id="inprogress">0</b></div>
+                <div><small>Remaining</small><b id="remaining">0</b></div>
+                <div><small>Expected hrs</small><b id="expected">0h</b></div>
+                <div><small>Study hrs</small><b id="taken">0h</b></div>
+                <div><small>Hours left</small><b id="left">0h</b></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="two-col">
+            <section class="panel">
+              <div class="row between">
+                <div>
+                  <small>CURRENT FOCUS</small>
+                  <h2 id="currentName">No topic selected</h2>
+                </div>
+                <button class="btn secondary" id="currentEdit">Edit</button>
+              </div>
+              <div class="tags">
+                <span id="currentCourse">—</span
+                ><span id="currentStatus">Not Started</span>
+              </div>
+              <div class="stats three">
+                <div><small>Expected</small><b id="currentExpected">0h</b></div>
+                <div><small>Taken</small><b id="currentTaken">0h</b></div>
+                <div><small>Covered</small><b id="currentCovered">0%</b></div>
+              </div>
+              <div class="progress"><i id="currentBar"></i></div>
+              <p class="muted" id="currentRemarks">
+                Select a topic to make it your current focus.
+              </p>
+              <button class="btn primary" id="sessionBtn">Start session</button>
+            </section>
+
+            <section class="panel compact-panel">
+              <div class="row between">
+                <div>
+                  <small>REVISION NEEDED</small>
+                  <h2>Queue</h2>
+                </div>
+                <button class="btn secondary" data-goto="revision">
+                  Open revision
+                </button>
+              </div>
+              <div id="revisionNeeded" class="list"></div>
+            </section>
+          </div>
+
+          <div class="two-col">
+            <section class="panel compact-panel">
+              <div class="row between">
+                <div>
+                  <small>TODAY</small>
+                  <h2>Focus</h2>
+                </div>
+              </div>
+              <div id="todayFocus"></div>
+            </section>
+
+            <section class="panel compact-panel">
+              <div class="row between">
+                <div>
+                  <small>DAILY STATUS</small>
+                  <h2>Consistency</h2>
+                </div>
+              </div>
+              <div id="dailyCheckin"></div>
+            </section>
+          </div>
+
+          <div class="two-col">
+            <section class="panel compact-panel">
+              <div class="row between">
+                <div>
+                  <small>ACTIVE PROJECT</small>
+                  <h2>Current build</h2>
+                </div>
+              </div>
+              <div id="activeProjectCard"></div>
+            </section>
+
+            <section class="panel compact-panel">
+              <div class="row between">
+                <div>
+                  <small>UP NEXT</small>
+                  <h2>Planning</h2>
+                </div>
+              </div>
+              <div id="upNext" class="list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="courses">
+          <div class="toolbar">
+            <div class="filters">
+              <select id="courseFilter"></select>
+              <select id="statusFilter">
+                <option value="all">All status</option>
+                <option>Not Started</option>
+                <option>In Progress</option>
+                <option>Completed</option>
+              </select>
+              <input id="search" placeholder="Search topic" />
+            </div>
+            <button class="btn primary" id="addTopic">+ Add topic</button>
+          </div>
+          <div id="courseList"></div>
+        </section>
+
+        <section class="view" id="revision">
+          <div class="toolbar">
+            <div class="filters">
+              <select id="revisionCourseFilter">
+                <option value="all">All courses</option>
+              </select>
+              <select id="revisionStatusFilter">
+                <option value="all">All status</option>
+                <option>Needs Revision</option>
+                <option>Reviewed</option>
+              </select>
+              <select id="revisionConfidenceFilter">
+                <option value="all">All confidence</option>
+                <option>Weak</option>
+                <option>Needs Practice</option>
+                <option>Good</option>
+                <option>Strong</option>
+              </select>
+            </div>
+            <button class="btn primary" id="addRevision">+ Add revision</button>
+          </div>
+
+          <div class="two-col revision-layout">
+            <section class="panel">
+              <div class="row between">
+                <div>
+                  <small>REVISION QUEUE</small>
+                  <h2>Needs attention</h2>
+                </div>
+              </div>
+              <div id="revisionQueue" class="stack-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="row between">
+                <div>
+                  <small>REVISION LIBRARY</small>
+                  <h2>All items</h2>
+                </div>
+              </div>
+              <div id="revisionList" class="stack-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="projects">
+          <div class="toolbar">
+            <div class="filters">
+              <input id="projectSearch" placeholder="Search project" />
+            </div>
+            <button class="btn primary" id="addProject">+ Add project</button>
+          </div>
+          <div id="projectList" class="project-grid"></div>
+        </section>
+
+        <section class="view" id="calendar">
+          <div class="row between">
+            <div>
+              <small>PLANNED PREPARATION</small>
+              <h2 id="monthTitle">Calendar</h2>
+            </div>
+            <div class="row">
+              <button class="btn secondary" id="prev">←</button>
+              <button class="btn secondary" id="today">Today</button>
+              <button class="btn secondary" id="next">→</button>
+            </div>
+          </div>
+          <div id="calendarGrid" class="calendar"></div>
+        </section>
+
+        <section class="view" id="settings">
+          <div class="settings-grid">
+            <section class="panel">
+              <small>TARGET</small>
+              <h2>Job switch target</h2>
+              <label
+                >Target date & time<input
+                  type="datetime-local"
+                  id="targetInput"
+              /></label>
+              <label
+                >Daily study target (hours)<input
+                  type="number"
+                  min="0"
+                  max="24"
+                  step=".25"
+                  id="dailyInput"
+              /></label>
+              <button class="btn primary" id="saveSettings">
+                Save settings
+              </button>
+            </section>
+
+            <section class="panel">
+              <small>DATA</small>
+              <h2>Backup & restore</h2>
+              <p class="muted">
+                Progress is stored in this browser. Export JSON before changing
+                devices.
+              </p>
+              <div class="stack">
+                <button class="btn secondary" id="export2">Export JSON</button>
+                <label class="btn secondary file"
+                  >Import JSON<input
+                    type="file"
+                    accept="application/json"
+                    id="importInput"
+                /></label>
+                <button class="btn danger" id="reset">
+                  Reset starter plan
+                </button>
+              </div>
+            </section>
+
+            <section class="panel full">
+              <small>GOOGLE DRIVE</small>
+              <h2>Optional cloud backup</h2>
+              <p class="muted">
+                Add a Google OAuth Web Client ID to enable Drive save/load. This
+                app stores one JSON backup.
+              </p>
+              <label
+                >Google OAuth Client ID<input
+                  id="clientId"
+                  placeholder="...apps.googleusercontent.com"
+              /></label>
+              <div class="row">
+                <button class="btn secondary" id="driveConnect">Connect</button>
+                <button class="btn secondary" id="driveSave">
+                  Save to Drive
+                </button>
+                <button class="btn secondary" id="driveLoad">
+                  Load from Drive
+                </button>
+                <span id="driveStatus" class="muted">Not connected</span>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="backdrop" id="modal" hidden>
+      <div class="modal">
+        <div class="row between">
+          <div>
+            <small id="modalType">TOPIC</small>
+            <h2 id="modalTitle">Edit topic</h2>
+          </div>
+          <button class="icon" id="closeModal">×</button>
+        </div>
+
+        <form id="topicForm">
+          <input type="hidden" id="topicId" />
+          <div class="form-grid">
+            <label>Course<input id="fCourse" required /></label>
+            <label>Topic<input id="fName" required /></label>
+            <label
+              >Expected hours<input
+                type="number"
+                min="0"
+                step=".25"
+                id="fExpected"
+                required
+            /></label>
+            <label
+              >Time taken<input
+                type="number"
+                min="0"
+                step=".25"
+                id="fTaken"
+                required
+            /></label>
+            <label
+              >Covered %<input
+                type="number"
+                min="0"
+                max="100"
+                id="fCovered"
+                required
+            /></label>
+            <label
+              >Status<select id="fStatus">
+                <option>Not Started</option>
+                <option>In Progress</option>
+                <option>Completed</option>
+              </select></label
+            >
+            <label>Planned date<input type="date" id="fDate" /></label>
+            <label
+              >Priority<select id="fPriority">
+                <option>Normal</option>
+                <option>High</option>
+              </select></label
+            >
+            <label class="full"
+              >Remarks<textarea rows="4" id="fRemarks"></textarea>
+            </label>
+          </div>
+
+          <div class="row between modal-actions">
+            <button type="button" class="btn danger" id="deleteTopic">
+              Delete
+            </button>
+            <div class="row">
+              <button type="button" class="btn secondary" id="cancelModal">
+                Cancel
+              </button>
+              <button class="btn primary">Save topic</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="backdrop" id="revisionModal" hidden>
+      <div class="modal">
+        <div class="row between">
+          <div>
+            <small>REVISION</small>
+            <h2>Track revision</h2>
+          </div>
+          <button class="icon" id="closeRevision">×</button>
+        </div>
+
+        <form id="revisionForm">
+          <input type="hidden" id="revisionId" />
+          <div class="form-grid">
+            <label>Course<input id="revCourse" required /></label>
+            <label>Topic<input id="revTopic" required /></label>
+            <label>Subtopic<input id="revSubtopic" /></label>
+            <label
+              >Status<select id="revStatus">
+                <option>Needs Revision</option>
+                <option>Reviewed</option>
+              </select></label
+            >
+            <label
+              >Confidence<select id="revConfidence">
+                <option>Weak</option>
+                <option>Needs Practice</option>
+                <option>Good</option>
+                <option>Strong</option>
+              </select></label
+            >
+            <label
+              >Priority<select id="revPriority">
+                <option>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+              </select></label
+            >
+            <label>Last revised<input type="date" id="revLast" /></label>
+            <label>Next review<input type="date" id="revNext" /></label>
+            <label
+              >Revision count<input type="number" min="0" id="revCount"
+            /></label>
+            <label class="full"
+              >Notes<textarea rows="4" id="revNotes"></textarea>
+            </label>
+          </div>
+
+          <div class="row between modal-actions">
+            <button type="button" class="btn danger" id="deleteRevision">
+              Delete
+            </button>
+            <div class="row">
+              <button type="button" class="btn secondary" id="closeRevisionBtn">
+                Cancel
+              </button>
+              <button type="button" class="btn primary" id="saveRevision">
+                Save revision
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="backdrop" id="projectModal" hidden>
+      <div class="modal large-modal">
+        <div class="row between">
+          <div>
+            <small>PROJECT</small>
+            <h2>Project workspace</h2>
+          </div>
+          <button class="icon" id="closeProject">×</button>
+        </div>
+
+        <form id="projectForm">
+          <input type="hidden" id="projectId" />
+          <div class="form-grid">
+            <label>Project name<input id="projectName" required /></label>
+            <label
+              >Project type<input id="projectType" value="Full-Stack AI"
+            /></label>
+            <label
+              >Status<select id="projectStatus">
+                <option>Idea</option>
+                <option>Planned</option>
+                <option>In Progress</option>
+                <option>Blocked</option>
+                <option>Completed</option>
+                <option>Archived</option>
+              </select></label
+            >
+            <label
+              >Priority<select id="projectPriority">
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+              </select></label
+            >
+            <label
+              >Progress %<input
+                id="projectProgress"
+                type="number"
+                min="0"
+                max="100"
+                value="0"
+            /></label>
+            <label>Target<input id="projectTarget" value="Portfolio" /></label>
+            <label>Start date<input type="date" id="projectStart" /></label>
+            <label
+              >Target date<input type="date" id="projectTargetDate"
+            /></label>
+            <label
+              >Expected hrs<input type="number" id="projectExpected" value="0"
+            /></label>
+            <label
+              >Taken hrs<input type="number" id="projectTaken" value="0"
+            /></label>
+            <label class="full"
+              >Short description<textarea
+                rows="2"
+                id="projectDescription"
+              ></textarea>
+            </label>
+            <label class="full"
+              >Problem statement<textarea rows="2" id="projectGoals"></textarea>
+            </label>
+            <label class="full"
+              >Technologies<input
+                id="projectTech"
+                placeholder="Next.js, FastAPI, PostgreSQL"
+            /></label>
+            <label>GitHub link<input id="projectRepo" /></label>
+            <label>Live demo<input id="projectLive" /></label>
+            <label>Documentation<input id="projectDocs" /></label>
+            <label>Design link<input id="projectDesign" /></label>
+            <label class="full"
+              >Notes<textarea rows="3" id="projectNotes"></textarea>
+            </label>
+          </div>
+
+          <div class="task-box">
+            <div class="row between">
+              <h3>Tasks</h3>
+              <button type="button" class="btn secondary small" id="addTaskRow">
+                + Add task
+              </button>
+            </div>
+            <div id="projectTaskList"></div>
+          </div>
+
+          <div class="row between modal-actions">
+            <button type="button" class="btn danger" id="deleteProject">
+              Delete
+            </button>
+            <div class="row">
+              <button type="button" class="btn secondary" id="cancelProject">
+                Cancel
+              </button>
+              <button type="button" class="btn primary" id="saveProject">
+                Save project
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
