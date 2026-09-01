@@ -5,7 +5,8 @@
   "scripts": {
     "build": "node scripts/generate-config.js",
     "start": "npm run build && python -m http.server 5500",
-    "dev": "npm run build && python -m http.server 5500"
+    "dev": "npm run build && python -m http.server 5500",
+    "vercel-build": "node scripts/generate-config.js"
   },
   "dependencies": {
     "dotenv": "^16.0.0"
