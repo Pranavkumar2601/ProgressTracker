@@ -10,6 +10,10 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <script src="config.js"></script>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -50,118 +54,133 @@
         </header>
 
         <section class="view active" id="dashboard">
-          <div class="top-grid">
-            <section class="panel dark">
-              <small>JOB SWITCH TARGET</small>
-              <h2 id="targetLabel">February 2027</h2>
-              <div class="countdown" id="countdown">-- : -- : -- : --</div>
-              <div class="count-labels">
-                <span>Days</span><span>Hours</span><span>Min</span
-                ><span>Sec</span>
+          <div class="panel hero-panel">
+            <div class="hero-header">
+              <div>
+                <small>Job switch target</small>
+                <h2 id="targetLabel">February 2027</h2>
               </div>
-              <div class="target-line" id="targetLine"></div>
-            </section>
+              <span class="pill" id="donePill">0 / 0 completed</span>
+            </div>
 
-            <section class="panel">
-              <div class="row between">
-                <div>
-                  <small>OVERALL PREPARATION</small>
-                  <h2 id="overall">0%</h2>
-                </div>
-                <span class="pill" id="donePill">0 / 0 completed</span>
+            <div class="countdown-wrap">
+              <div class="countdown" id="countdown">--</div>
+              <div class="count-meta">
+                <span>days</span>
+                <span>hours</span>
+                <span>min</span>
+                <span>sec</span>
               </div>
-              <div class="progress"><i id="overallBar"></i></div>
-              <div class="stats">
-                <div><small>Completed</small><b id="completed">0</b></div>
-                <div><small>In progress</small><b id="inprogress">0</b></div>
-                <div><small>Remaining</small><b id="remaining">0</b></div>
-                <div><small>Expected hrs</small><b id="expected">0h</b></div>
-                <div><small>Study hrs</small><b id="taken">0h</b></div>
-                <div><small>Hours left</small><b id="left">0h</b></div>
-              </div>
-            </section>
+            </div>
+
+            <div class="target-line" id="targetLine"></div>
           </div>
 
-          <div class="two-col">
-            <section class="panel">
-              <div class="row between">
-                <div>
-                  <small>CURRENT FOCUS</small>
-                  <h2 id="currentName">No topic selected</h2>
-                </div>
-                <button class="btn secondary" id="currentEdit">Edit</button>
-              </div>
-              <div class="tags">
-                <span id="currentCourse">—</span
-                ><span id="currentStatus">Not Started</span>
-              </div>
-              <div class="stats three">
-                <div><small>Expected</small><b id="currentExpected">0h</b></div>
-                <div><small>Taken</small><b id="currentTaken">0h</b></div>
-                <div><small>Covered</small><b id="currentCovered">0%</b></div>
-              </div>
-              <div class="progress"><i id="currentBar"></i></div>
-              <p class="muted" id="currentRemarks">
-                Select a topic to make it your current focus.
-              </p>
-              <button class="btn primary" id="sessionBtn">Start session</button>
-            </section>
+          <div class="stats-row">
+            <div class="metric">
+              <small>Overall</small><strong id="overall">0%</strong>
+            </div>
+            <div class="metric">
+              <small>Completed</small><strong id="completed">0</strong>
+            </div>
+            <div class="metric">
+              <small>In progress</small><strong id="inprogress">0</strong>
+            </div>
+            <div class="metric">
+              <small>Remaining</small><strong id="remaining">0</strong>
+            </div>
+            <div class="metric">
+              <small>Expected</small><strong id="expected">0h</strong>
+            </div>
+            <div class="metric">
+              <small>Study hrs</small><strong id="taken">0h</strong>
+            </div>
+            <div class="metric">
+              <small>Hours left</small><strong id="left">0h</strong>
+            </div>
+          </div>
 
-            <section class="panel compact-panel">
-              <div class="row between">
+          <div class="panel progress-panel">
+            <div class="progress"><i id="overallBar"></i></div>
+          </div>
+
+          <div class="dashboard-grid">
+            <section class="panel focus-panel">
+              <div class="section-head">
                 <div>
-                  <small>REVISION NEEDED</small>
-                  <h2>Queue</h2>
+                  <small>Current focus</small>
+                  <h3 id="currentName">No topic selected</h3>
                 </div>
-                <button class="btn secondary" data-goto="revision">
-                  Open revision
+                <button class="btn secondary small" id="currentEdit">
+                  Edit
                 </button>
               </div>
-              <div id="revisionNeeded" class="list"></div>
-            </section>
-          </div>
 
-          <div class="two-col">
-            <section class="panel compact-panel">
-              <div class="row between">
+              <div class="focus-row">
+                <div class="chip" id="currentCourse">—</div>
+                <span class="status-chip status-not" id="currentStatus"
+                  >Not Started</span
+                >
+              </div>
+
+              <div class="mini-stats">
                 <div>
-                  <small>TODAY</small>
-                  <h2>Focus</h2>
+                  <small>Expected</small
+                  ><strong id="currentExpected">0h</strong>
+                </div>
+                <div>
+                  <small>Taken</small><strong id="currentTaken">0h</strong>
+                </div>
+                <div>
+                  <small>Covered</small><strong id="currentCovered">0%</strong>
+                </div>
+              </div>
+
+              <div class="progress"><i id="currentBar"></i></div>
+
+              <label class="field-label">Study timer</label>
+              <select id="timerTopic" class="inline-select"></select>
+
+              <div class="timer-actions">
+                <button class="btn primary" id="sessionBtn">
+                  Start session
+                </button>
+                <span class="muted" id="currentRemarks"
+                  >Select a topic to make it your current focus.</span
+                >
+              </div>
+            </section>
+
+            <section class="panel compact-panel">
+              <div class="section-head">
+                <div>
+                  <small>Today</small>
+                  <h3>Focus</h3>
                 </div>
               </div>
               <div id="todayFocus"></div>
             </section>
-
-            <section class="panel compact-panel">
-              <div class="row between">
-                <div>
-                  <small>DAILY STATUS</small>
-                  <h2>Consistency</h2>
-                </div>
-              </div>
-              <div id="dailyCheckin"></div>
-            </section>
           </div>
 
-          <div class="two-col">
+          <div class="dashboard-grid">
             <section class="panel compact-panel">
-              <div class="row between">
+              <div class="section-head">
                 <div>
-                  <small>ACTIVE PROJECT</small>
-                  <h2>Current build</h2>
-                </div>
-              </div>
-              <div id="activeProjectCard"></div>
-            </section>
-
-            <section class="panel compact-panel">
-              <div class="row between">
-                <div>
-                  <small>UP NEXT</small>
-                  <h2>Planning</h2>
+                  <small>Up next</small>
+                  <h3>Planning</h3>
                 </div>
               </div>
               <div id="upNext" class="list"></div>
+            </section>
+
+            <section class="panel compact-panel">
+              <div class="section-head">
+                <div>
+                  <small>Daily status</small>
+                  <h3>Consistency</h3>
+                </div>
+              </div>
+              <div id="dailyCheckin"></div>
             </section>
           </div>
         </section>
@@ -299,10 +318,9 @@
 
             <section class="panel full">
               <small>GOOGLE DRIVE</small>
-              <h2>Optional cloud backup</h2>
+              <h2>Cloud backup & real-time sync</h2>
               <p class="muted">
-                Add a Google OAuth Web Client ID to enable Drive save/load. This
-                app stores one JSON backup.
+                Add a Google OAuth Web Client ID to enable Drive save/load. Auto-sync keeps your data synced in real-time across all your devices (desktop, mobile, etc).
               </p>
               <label
                 >Google OAuth Client ID<input
@@ -319,6 +337,21 @@
                 </button>
                 <span id="driveStatus" class="muted">Not connected</span>
               </div>
+              <label
+                style="
+                  margin-top: 12px;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                "
+              >
+                <input type="checkbox" id="autoSync" />
+                <span>Enable real-time sync across devices (auto-pull every 30s)</span>
+              </label>
+              <p class="muted" style="font-size: 10px; margin-top: 8px;">
+                When enabled: Changes made on any device automatically sync to Google Drive every 5s, and this device checks for updates every 30s.
+              </p>
+              </label>
             </section>
           </div>
         </section>
@@ -566,6 +599,16 @@
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <div class="bottom-tabbar" aria-label="mobile navigation">
+      <button class="nav active" data-view="dashboard">Dashboard</button>
+      <button class="nav" data-view="courses">Courses</button>
+      <button class="nav" data-view="revision">Revision</button>
+      <button class="nav" data-view="projects">Projects</button>
+      <button class="nav" data-view="calendar">Calendar</button>
+      <button class="nav" data-view="settings">Settings</button>
+    </div>
+
     <script src="app.js"></script>
   </body>
 </html>

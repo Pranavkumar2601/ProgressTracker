@@ -139,9 +139,17 @@ const esc = (s) =>
 const pct = (n) => Math.max(0, Math.min(100, +n || 0));
 const hrs = (n) => (+n || 0).toFixed(1).replace(".0", "") + "h";
 const statusClass = (s) =>
-  s === "Completed" ? "done" : s === "In Progress" ? "prog" : "not";
+  s === "Completed"
+    ? "status-done"
+    : s === "In Progress"
+      ? "status-prog"
+      : "status-not";
 const revisionClass = (s) =>
-  s === "Needs Revision" ? "warn" : s === "Reviewed" ? "done" : "not";
+  s === "Needs Revision"
+    ? "status-warn"
+    : s === "Reviewed"
+      ? "status-done"
+      : "status-not";
 const normalizeConfidence = (v) =>
   ["Weak", "Needs Practice", "Good", "Strong"].includes(v) ? v : "Weak";
 
@@ -325,6 +333,10 @@ let S = readSavedState();
 let timer = { on: false, id: null, start: 0, handle: null };
 let cal = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let driveToken = null;
+let lastDriveSyncTime = 0;
+let autoSyncEnabled = false;
+let lastDriveLoadTime = 0;
+let syncCheckInterval = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -336,6 +348,12 @@ function save() {
       "Saved locally • " +
       new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   renderAll();
+
+  // Auto-sync to Drive if connected and enabled
+  if (driveToken && autoSyncEnabled && Date.now() - lastDriveSyncTime > 5000) {
+    lastDriveSyncTime = Date.now();
+    driveSave().catch((e) => console.error("Auto-sync failed:", e));
+  }
 }
 
 function toast(message) {
@@ -419,8 +437,20 @@ function renderDashboard() {
     ? Math.round(topics.reduce((sum, t) => sum + pct(t.covered), 0) / total)
     : 0;
 
+  const timerTopic = $("timerTopic");
+  if (timerTopic) {
+    const currentTopicId = S.selected || (topics[0] && topics[0].id);
+    timerTopic.innerHTML = topics
+      .map(
+        (topic) =>
+          `<option value="${topic.id}" ${topic.id === currentTopicId ? "selected" : ""}>${esc(topic.name)}</option>`,
+      )
+      .join("");
+    timerTopic.value = currentTopicId || "";
+  }
+
   $("overall").textContent = overall + "%";
-  $("overallBar").style.width = overall + "%";
+  if ($("overallBar")) $("overallBar").style.width = overall + "%";
   $("donePill").textContent = `${done} / ${total} completed`;
   $("completed").textContent = done;
   $("inprogress").textContent = inProgress;
@@ -445,6 +475,7 @@ function renderDashboard() {
     $("currentName").textContent = active.name;
     $("currentCourse").textContent = active.course;
     $("currentStatus").textContent = active.status;
+    $("currentStatus").className = `status-chip ${statusClass(active.status)}`;
     $("currentExpected").textContent = hrs(active.expected);
     $("currentTaken").textContent = hrs(active.taken);
     $("currentCovered").textContent = pct(active.covered) + "%";
@@ -456,6 +487,7 @@ function renderDashboard() {
     $("currentName").textContent = "No topic selected";
     $("currentCourse").textContent = "—";
     $("currentStatus").textContent = "Not Started";
+    $("currentStatus").className = "status-chip status-not";
     $("currentExpected").textContent = "0h";
     $("currentTaken").textContent = "0h";
     $("currentCovered").textContent = "0%";
@@ -484,48 +516,60 @@ function renderDashboard() {
     : '<p class="muted">Everything is complete.</p>';
 
   const revisionQueue = getRevisionQueue();
-  $("revisionNeeded").innerHTML = revisionQueue.length
-    ? `<div class="mini-list">${revisionQueue
-        .slice(0, 5)
-        .map(
-          (item) =>
-            `<div class="mini-item"><b>${esc(item.topic)}</b><small>${esc(item.course)} • ${esc(item.confidence)}</small></div>`,
-        )
-        .join(
-          "",
-        )}</div><button class="btn secondary small" data-goto="revision">Open Revision</button>`
-    : '<p class="muted">Everything is on track.</p>';
+  const revisionNeeded = $("revisionNeeded");
+  if (revisionNeeded) {
+    revisionNeeded.innerHTML = revisionQueue.length
+      ? `<div class="mini-list">${revisionQueue
+          .slice(0, 5)
+          .map(
+            (item) =>
+              `<div class="mini-item"><b>${esc(item.topic)}</b><small>${esc(item.course)} • ${esc(item.confidence)}</small></div>`,
+          )
+          .join(
+            "",
+          )}</div><button class="btn secondary small" data-goto="revision">Open Revision</button>`
+      : '<p class="muted">Everything is on track.</p>';
+  }
 
   const activeProject =
     S.projects.find(
       (p) => p.status !== "Completed" && p.status !== "Archived",
     ) || S.projects[0];
-  $("activeProjectCard").innerHTML = activeProject
-    ? `<div class="project-pill"><b>${esc(activeProject.name)}</b><small>${esc(activeProject.type)} • ${activeProject.progress}%</small><div class="mini-progress"><i style="width:${activeProject.progress}%"></i></div></div>`
-    : '<p class="muted">No active project yet.</p>';
+  const activeProjectCard = $("activeProjectCard");
+  if (activeProjectCard) {
+    activeProjectCard.innerHTML = activeProject
+      ? `<div class="project-pill"><b>${esc(activeProject.name)}</b><small>${esc(activeProject.type)} • ${activeProject.progress}%</small><div class="mini-progress"><i style="width:${activeProject.progress}%"></i></div></div>`
+      : '<p class="muted">No active project yet.</p>';
+  }
 
   const todayLog = getTodayLog();
   const consistency = getConsistencySummary();
-  $("todayFocus").innerHTML = `
-    <div class="focus-list">
-      <div><label>Learning</label><strong>${esc(active ? active.name : "No topic selected")}</strong><small>${esc(active ? active.course : "Set a focus topic")}</small></div>
-      <div><label>Revision</label><strong>${revisionQueue[0] ? esc(revisionQueue[0].topic) : "No revision"}</strong><small>${revisionQueue[0] ? esc(revisionQueue[0].confidence) : "All clear"}</small></div>
-      <div><label>Project</label><strong>${esc(activeProject ? activeProject.name : "No active project")}</strong><small>${activeProject ? activeProject.progress + "% progress" : "Create one now"}</small></div>
-    </div>`;
+  const todayFocus = $("todayFocus");
+  if (todayFocus) {
+    todayFocus.innerHTML = `
+      <div class="focus-list">
+        <div><label>Learning</label><strong>${esc(active ? active.name : "No topic selected")}</strong><small>${esc(active ? active.course : "Set a focus topic")}</small></div>
+        <div><label>Revision</label><strong>${revisionQueue[0] ? esc(revisionQueue[0].topic) : "No revision"}</strong><small>${revisionQueue[0] ? esc(revisionQueue[0].confidence) : "All clear"}</small></div>
+        <div><label>Project</label><strong>${esc(activeProject ? activeProject.name : "No active project")}</strong><small>${activeProject ? activeProject.progress + "% progress" : "Create one now"}</small></div>
+      </div>`;
+  }
 
-  $("dailyCheckin").innerHTML = `
-    <div class="checkin-box">
-      <label>Study hours today<input id="dailyHours" type="number" min="0" max="12" step="0.25" value="${todayLog.hours || 0}"></label>
-      <label>Consistency<select id="dailyConfidence">
-        <option ${todayLog.consistency === "Weak" ? "selected" : ""}>Weak</option>
-        <option ${todayLog.consistency === "Needs Practice" ? "selected" : ""}>Needs Practice</option>
-        <option ${todayLog.consistency === "Good" ? "selected" : ""}>Good</option>
-        <option ${todayLog.consistency === "Strong" ? "selected" : ""}>Strong</option>
-      </select></label>
-      <label>Daily note<textarea id="dailyNotes" rows="3">${esc(todayLog.notes || "")}</textarea></label>
-      <button class="btn primary" id="saveDailyStatus">Save daily status</button>
-      <div class="tiny"><strong>${consistency.hit}/${consistency.days}</strong> days on target this week</div>
-    </div>`;
+  const dailyCheckin = $("dailyCheckin");
+  if (dailyCheckin) {
+    dailyCheckin.innerHTML = `
+      <div class="checkin-box">
+        <label>Study hours today<input id="dailyHours" type="number" min="0" max="12" step="0.25" value="${todayLog.hours || 0}"></label>
+        <label>Consistency<select id="dailyConfidence">
+          <option ${todayLog.consistency === "Weak" ? "selected" : ""}>Weak</option>
+          <option ${todayLog.consistency === "Needs Practice" ? "selected" : ""}>Needs Practice</option>
+          <option ${todayLog.consistency === "Good" ? "selected" : ""}>Good</option>
+          <option ${todayLog.consistency === "Strong" ? "selected" : ""}>Strong</option>
+        </select></label>
+        <label>Daily note<textarea id="dailyNotes" rows="3">${esc(todayLog.notes || "")}</textarea></label>
+        <button class="btn primary" id="saveDailyStatus">Save daily status</button>
+        <div class="tiny"><strong>${consistency.hit}/${consistency.days}</strong> days on target this week</div>
+      </div>`;
+  }
 }
 
 function countdown() {
@@ -535,7 +579,8 @@ function countdown() {
   if (!el) return;
 
   if (diff <= 0) {
-    el.textContent = "TARGET REACHED";
+    el.innerHTML =
+      '<span class="countdown-days">0</span><span class="countdown-parts"><span>00</span><span class="colon">:</span><span>00</span><span class="colon">:</span><span>00</span></span>';
     return;
   }
 
@@ -544,7 +589,16 @@ function countdown() {
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const mins = Math.floor((totalSeconds % 3600) / 60);
   const secs = totalSeconds % 60;
-  el.textContent = `${days} : ${String(hours).padStart(2, "0")} : ${String(mins).padStart(2, "0")} : ${String(secs).padStart(2, "0")}`;
+  el.innerHTML = `
+    <span class="countdown-days">${days}</span>
+    <span class="countdown-parts">
+      <span>${String(hours).padStart(2, "0")}</span>
+      <span class="colon">:</span>
+      <span>${String(mins).padStart(2, "0")}</span>
+      <span class="colon">:</span>
+      <span>${String(secs).padStart(2, "0")}</span>
+    </span>
+  `;
 }
 
 function renderRevision() {
@@ -766,9 +820,22 @@ function renderSettings() {
   $("targetInput").value = S.targetDate;
   $("dailyInput").value = S.dailyTarget;
   $("clientId").value = configuredClientId;
-  $("driveStatus").textContent = driveToken
-    ? "Connected for this session"
-    : "Not connected";
+
+  const statusEl = $("driveStatus");
+  if (statusEl) {
+    let statusText = "Not connected";
+    if (driveToken) {
+      statusText = autoSyncEnabled
+        ? "✓ Connected • Auto-sync ON"
+        : "✓ Connected • Manual mode";
+    }
+    statusEl.textContent = statusText;
+  }
+
+  const autoSyncCheckbox = $("autoSync");
+  if (autoSyncCheckbox) {
+    autoSyncCheckbox.checked = autoSyncEnabled;
+  }
 }
 
 function renderAll() {
@@ -1039,8 +1106,13 @@ async function connectDrive() {
     client.requestAccessToken({ prompt: "consent" });
   });
 
+  // Start auto-sync check when connected
+  if (autoSyncEnabled) {
+    startAutoSyncCheck();
+  }
+
   renderSettings();
-  toast("Google Drive connected");
+  toast("✓ Google Drive connected");
 }
 
 async function driveFiles() {
@@ -1058,6 +1130,9 @@ async function driveFiles() {
 async function driveSave() {
   if (!driveToken) await connectDrive();
   if (!driveToken) return;
+
+  // Add timestamp to track when this version was saved
+  S.mergeTimestamp = Date.now();
 
   const existing = (await driveFiles())[0];
   const metadata = new Blob(
@@ -1080,7 +1155,12 @@ async function driveSave() {
   });
 
   if (!response.ok) throw new Error("Drive save failed");
-  toast("Saved to Google Drive");
+
+  lastDriveSyncTime = Date.now();
+  const msg = existing
+    ? "✓ Synced to Google Drive"
+    : "✓ Created backup on Google Drive";
+  toast(msg);
 }
 
 async function driveLoad() {
@@ -1089,7 +1169,7 @@ async function driveLoad() {
 
   const existing = (await driveFiles())[0];
   if (!existing) {
-    toast("No tracker backup found");
+    toast("No tracker backup found on Drive");
     return;
   }
 
@@ -1101,12 +1181,102 @@ async function driveLoad() {
   );
 
   if (!response.ok) throw new Error("Drive load failed");
-  const payload = await response.json();
-  if (!payload.topics) throw new Error("Invalid backup");
+  const driveData = await response.json();
+  if (!driveData.topics) throw new Error("Invalid backup");
 
-  S = payload;
-  save();
-  toast("Loaded from Google Drive");
+  // Timestamp-based merge for real-time multi-device sync
+  const mergeTimestamp = driveData.mergeTimestamp || Date.now();
+  const localTimestamp = S.mergeTimestamp || 0;
+
+  // If Drive is newer, use Drive as base and add local-only items
+  if (mergeTimestamp > localTimestamp) {
+    // Keep all Drive data
+    S.targetDate = driveData.targetDate || S.targetDate;
+    S.dailyTarget = driveData.dailyTarget || S.dailyTarget;
+    S.settings = { ...driveData.settings, ...S.settings };
+
+    // Merge topics: Drive items + any local-only items
+    const driveTopicIds = new Set(driveData.topics.map((t) => t.id));
+    const localOnlyTopics = S.topics.filter((t) => !driveTopicIds.has(t.id));
+    S.topics = [...driveData.topics, ...localOnlyTopics];
+
+    // Merge revision items
+    const driveRevIds = new Set(
+      driveData.revisionItems?.map((r) => r.id) || [],
+    );
+    const localOnlyRev = S.revisionItems.filter((r) => !driveRevIds.has(r.id));
+    S.revisionItems = [...(driveData.revisionItems || []), ...localOnlyRev];
+
+    // Merge projects
+    const driveProjIds = new Set(driveData.projects?.map((p) => p.id) || []);
+    const localOnlyProj = S.projects.filter((p) => !driveProjIds.has(p.id));
+    S.projects = [...(driveData.projects || []), ...localOnlyProj];
+
+    S.mergeTimestamp = mergeTimestamp;
+    save();
+    lastDriveLoadTime = Date.now();
+    toast("✓ Synced from Drive (latest data merged)");
+  } else {
+    // Local is newer or same, just add Drive-only items
+    const localTopicIds = new Set(S.topics.map((t) => t.id));
+    const driveNewTopics = driveData.topics.filter(
+      (t) => !localTopicIds.has(t.id),
+    );
+    S.topics = [...S.topics, ...driveNewTopics];
+
+    const localRevIds = new Set(S.revisionItems.map((r) => r.id));
+    const driveNewRev = (driveData.revisionItems || []).filter(
+      (r) => !localRevIds.has(r.id),
+    );
+    S.revisionItems = [...S.revisionItems, ...driveNewRev];
+
+    const localProjIds = new Set(S.projects.map((p) => p.id));
+    const driveNewProj = (driveData.projects || []).filter(
+      (p) => !localProjIds.has(p.id),
+    );
+    S.projects = [...S.projects, ...driveNewProj];
+
+    if (driveNewTopics.length || driveNewRev.length || driveNewProj.length) {
+      save();
+      toast("✓ Added new items from Drive");
+    }
+  }
+
+  lastDriveLoadTime = Date.now();
+}
+
+// Periodic sync check: pull changes from Drive every 30 seconds if auto-sync is on
+function startAutoSyncCheck() {
+  if (syncCheckInterval) clearInterval(syncCheckInterval);
+
+  syncCheckInterval = setInterval(async () => {
+    if (driveToken && autoSyncEnabled) {
+      try {
+        // Silent sync - don't show toast unless there are changes
+        const existing = (await driveFiles())[0];
+        if (existing) {
+          const response = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`,
+            {
+              headers: { Authorization: "Bearer " + driveToken },
+            },
+          );
+          if (response.ok) {
+            const driveData = await response.json();
+            const mergeTimestamp = driveData.mergeTimestamp || Date.now();
+            const localTimestamp = S.mergeTimestamp || 0;
+
+            // Only load if Drive has newer data
+            if (mergeTimestamp > localTimestamp) {
+              await driveLoad();
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Auto-sync check failed:", e);
+      }
+    }
+  }, 30000); // Check every 30 seconds
 }
 
 document.addEventListener("click", (event) => {
@@ -1147,6 +1317,15 @@ document.addEventListener("click", (event) => {
     });
     save();
     toast("Daily study update saved");
+    return;
+  }
+
+  if (event.target.closest("#timerTopic")) {
+    const topicId = $("timerTopic").value;
+    if (topicId) {
+      S.selected = topicId;
+      renderDashboard();
+    }
     return;
   }
 
@@ -1295,6 +1474,13 @@ $("quickAdd").onclick = () => modal();
 $("addTopic").onclick = () => modal();
 $("currentEdit").onclick = () => S.selected && modal(S.selected);
 $("sessionBtn").onclick = () => S.selected && toggleTimer(S.selected);
+$("timerTopic").onchange = () => {
+  const topicId = $("timerTopic").value;
+  if (topicId) {
+    S.selected = topicId;
+    save();
+  }
+};
 $("courseFilter").onchange = renderCourses;
 $("statusFilter").onchange = renderCourses;
 $("search").oninput = renderCourses;
@@ -1414,6 +1600,30 @@ $("driveLoad").onclick = async () => {
     toast("Drive load failed");
   }
 };
+
+const autoSyncCheckbox = $("autoSync");
+if (autoSyncCheckbox) {
+  autoSyncCheckbox.onchange = (e) => {
+    autoSyncEnabled = e.target.checked;
+    if (autoSyncEnabled && !driveToken) {
+      toast("Connect to Google Drive first");
+      e.target.checked = false;
+      return;
+    }
+
+    if (autoSyncEnabled) {
+      startAutoSyncCheck();
+      toast("✓ Auto-sync enabled (real-time across devices)");
+    } else {
+      if (syncCheckInterval) {
+        clearInterval(syncCheckInterval);
+        syncCheckInterval = null;
+      }
+      toast("Auto-sync disabled");
+    }
+    renderSettings();
+  };
+}
 
 setInterval(countdown, 1000);
 renderAll();
