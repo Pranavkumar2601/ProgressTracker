@@ -1,10 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "framework": "static",
   "outputDirectory": ".",
-  "env": {
-    "GOOGLE_CLIENT_ID": "@google_client_id"
-  },
   "headers": [
     {
       "source": "/(.*)",
